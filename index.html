@@ -30,8 +30,22 @@
     <meta name="ICBM" content="37.6774771, -113.0619239" />
   </head>
 
-  <body>
-    <div id="root"></div>
+  <body style="background-color: #fafafa; margin: 0; padding: 0;">
+    <div id="root" style="min-height: 100vh; background-color: #fafafa;">
+      <div style="padding: 40px; text-align: center; font-family: Arial, sans-serif;">
+        <h1 style="color: #333;">Loading...</h1>
+        <p style="color: #666;">If this message persists, check the browser console for errors.</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Fallback: If React doesn't load after 5 seconds, show error
+      setTimeout(function() {
+        var root = document.getElementById('root');
+        if (root && root.children.length === 1 && root.children[0].textContent.includes('Loading...')) {
+          root.innerHTML = '<div style="padding: 40px; text-align: center; font-family: Arial, sans-serif; background: #fff; margin: 20px; border-radius: 8px;"><h1 style="color: #d32f2f;">React Failed to Load</h1><p style="color: #666;">Please check the browser console (F12) for errors.</p><p style="color: #666; font-size: 12px; margin-top: 20px;">Make sure the dev server is running: npm run dev</p></div>';
+        }
+      }, 5000);
+    </script>
   </body>
 </html>

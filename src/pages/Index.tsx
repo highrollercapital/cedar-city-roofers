@@ -87,7 +87,9 @@ const testimonials = [
 ];
 
 const Index = () => {
+  console.log('🚀 Index page rendering...');
   return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#fafafa' }}>
     <Layout>
       <Helmet>
         <title>Cedar City Roofers – Top Rated Roofing Companies 2026</title>
@@ -117,33 +119,39 @@ const Index = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section className="relative min-h-[80vh] flex items-center overflow-hidden">
+      <section className="relative min-h-[80vh] flex items-center overflow-hidden bg-background">
         <div className="absolute inset-0 z-0">
           <img
             src={heroImage}
             alt="Beautiful home with new roof in Cedar City Utah"
             className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback if image doesn't load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
           />
           <div className="absolute inset-0 bg-hero-gradient opacity-80" />
+          <div className="absolute inset-0 bg-background/50" />
         </div>
 
-        <div className="container relative z-10 py-16 md:py-24">
+        <div className="container relative z-10 py-16 md:py-24 mx-auto px-4">
           <div className="max-w-2xl animate-fade-in-up">
             <div className="inline-flex items-center gap-2 bg-accent/20 text-accent-foreground px-4 py-2 rounded-full text-sm font-semibold mb-6">
               <Award className="w-4 h-4" />
               Trusted by 1,000+ Cedar City Homeowners
             </div>
-            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
+            <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight drop-shadow-lg">
               Top 5 Cedar City Roofers – Verified & Rated 2026
             </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/90 mb-8 leading-relaxed">
+            <p className="text-lg md:text-xl text-white/90 mb-8 leading-relaxed drop-shadow-md">
               We help homeowners find reliable roofing companies fast. Compare verified contractors, read real reviews, and get matched with the perfect roofer for your project.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button variant="hero" size="xl" asChild>
                 <a href="#quote">Get Your Free Roofing Quote</a>
               </Button>
-              <Button variant="outline" size="lg" className="bg-primary-foreground/10 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/20" asChild>
+              <Button variant="outline" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20 backdrop-blur-sm" asChild>
                 <a href="#roofers">View Top 5 Roofers</a>
               </Button>
             </div>
@@ -390,6 +398,7 @@ const Index = () => {
         </div>
       </section>
     </Layout>
+    </div>
   );
 };
 

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Home, MapPin, Phone, Mail, Facebook, Instagram, Linkedin } from "lucide-react";
+import { Home, MapPin, Phone, Mail, Facebook, Instagram, Linkedin, ArrowRight } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -115,6 +115,15 @@ const Footer = () => {
                 <a href="mailto:info@cedarcityroofers.com" className="text-sm opacity-80 hover:opacity-100 transition-opacity">
                   info@cedarcityroofers.com
                 </a>
+              </li>
+              <li className="pt-2 border-t border-primary-foreground/20">
+                <Link
+                  to="/login"
+                  className="text-sm font-semibold text-primary-foreground hover:opacity-100 transition-opacity inline-flex items-center gap-2"
+                >
+                  Partner / Roofer Login
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
               </li>
             </ul>
           </div>

@@ -103,12 +103,68 @@
     @apply border-border;
   }
 
+  html {
+    @apply bg-background;
+    background-color: hsl(var(--background)) !important;
+    background-color: #fafafa !important; /* Fallback */
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background-color: hsl(var(--background)) !important;
+    background-color: #fafafa !important; /* Fallback */
+    color: hsl(var(--foreground));
+    color: #1a1a1a; /* Fallback */
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    background-color: hsl(var(--background));
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
+  }
+
+  /* Ensure container has proper max-width */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      max-width: 640px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container {
+      max-width: 1280px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .container {
+      max-width: 1536px;
+    }
   }
 }
 
