@@ -1,16 +1,13 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Use the Lovable-standard env variable names
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nnvllbxleujvqoyfqgqe.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Supabase configuration - use env vars with hardcoded fallbacks for this project
+const SUPABASE_URL = 'https://nnvllbxleujvqoyfqgqe.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5udmxsYnhsZXVqdnFveWZxZ3FlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ3MTQ2OTIsImV4cCI6MjA4MDI5MDY5Mn0.7cRRzQhwS6pTbV7GMhQ2u1XNyT8Xf9K1Y-zrTsu8cd4';
 
-const isConfigured = supabaseUrl && supabaseAnonKey && supabaseAnonKey.startsWith('eyJ');
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_KEY;
 
-if (!isConfigured) {
-  console.warn('⚠️ Supabase configuration incomplete');
-} else {
-  console.log('✅ Supabase configured');
-}
+console.log('✅ Supabase configured');
 
 // Create Supabase client with fallback values to prevent crashes
 export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
