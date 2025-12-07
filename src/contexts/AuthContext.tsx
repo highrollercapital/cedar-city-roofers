@@ -35,6 +35,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const isSupabaseConfigured = () => {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
+    return url && key && key.startsWith('eyJ');
+  };
+
   const fetchUserProfile = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
       setUser(null);
@@ -42,7 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     // Check if Supabase is properly configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, skipping user profile fetch');
       setUser(null);
       return;
@@ -176,7 +182,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!isSupabaseConfigured()) {
       console.warn('Supabase not configured, running in demo mode');
       setLoading(false);
       return;
@@ -205,7 +211,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!isSupabaseConfigured()) {
       toast({
         title: 'Supabase not configured',
         description: 'Please configure Supabase to enable authentication.',
@@ -306,12 +312,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     role: 'admin' | 'roofer' | 'client' = 'roofer'
   ) => {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!isSupabaseConfigured()) {
       toast({
         title: 'Supabase Configuration Required',
-        description: 'Please set up your Supabase credentials. See GET_SUPABASE_URL.md for instructions.',
+        description: 'Please set up your Supabase credentials.',
         variant: 'destructive',
         duration: 10000,
       });
@@ -427,7 +433,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const signOut = async () => {
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    if (!isSupabaseConfigured()) {
       setUser(null);
       setSession(null);
       return;

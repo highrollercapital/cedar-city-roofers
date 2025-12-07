@@ -7,6 +7,11 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+// Extend jsPDF to include lastAutoTable
+interface ExtendedJsPDF extends jsPDF {
+  lastAutoTable: { finalY: number };
+}
+
 // Export leads to CSV
 export const exportLeadsToCSV = (leads: any[]): void => {
   const headers = ['Name', 'Email', 'Phone', 'Address', 'Roof Type', 'Status', 'Urgency', 'Created'];
@@ -107,7 +112,7 @@ export const exportRevenueReportToPDF = (revenueData: any): void => {
   // Monthly Revenue Table
   if (revenueData.chartData && revenueData.chartData.length > 0) {
     doc.setFontSize(12);
-    doc.text('Monthly Revenue', 14, doc.lastAutoTable.finalY + 15);
+    doc.text('Monthly Revenue', 14, (doc as ExtendedJsPDF).lastAutoTable.finalY + 15);
     
     const monthlyData = revenueData.chartData.map((item: any) => [
       item.month,
@@ -116,7 +121,7 @@ export const exportRevenueReportToPDF = (revenueData: any): void => {
     ]);
     
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 20,
+      startY: (doc as ExtendedJsPDF).lastAutoTable.finalY + 20,
       head: [['Month', 'Revenue', 'Projects']],
       body: monthlyData,
       theme: 'striped',
@@ -168,7 +173,7 @@ export const exportProposalToPDF = (proposal: any): void => {
       theme: 'striped',
     });
     
-    yPos = doc.lastAutoTable.finalY + 10;
+    yPos = (doc as ExtendedJsPDF).lastAutoTable.finalY + 10;
   }
   
   // Totals

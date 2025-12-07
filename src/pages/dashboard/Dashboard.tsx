@@ -266,7 +266,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold mb-1 text-cyan-600 dark:text-cyan-400">
-                {stats?.upcomingAppointments || 0}
+                {Array.isArray(stats?.upcomingAppointments) ? stats.upcomingAppointments.length : (stats?.upcomingAppointments || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 Scheduled appointments
@@ -342,7 +342,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                {stats?.upcomingAppointments || 0}
+                {Array.isArray(stats?.upcomingAppointments) ? stats.upcomingAppointments.length : (stats?.upcomingAppointments || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 Scheduled appointments
@@ -445,7 +445,7 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {stats?.upcomingAppointments && stats.upcomingAppointments.length > 0 && (
+      {Array.isArray(stats?.upcomingAppointments) && stats.upcomingAppointments.length > 0 && (
         <Card className="hover:shadow-lg transition-all duration-300">
           <CardHeader>
             <div className="flex items-center gap-2">
@@ -456,7 +456,7 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {stats.upcomingAppointments.map((apt: any) => (
+              {(stats.upcomingAppointments as Array<{id: string; title: string; start_time: string}>).map((apt) => (
                 <div
                   key={apt.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
