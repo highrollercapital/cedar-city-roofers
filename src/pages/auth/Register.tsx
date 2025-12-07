@@ -46,7 +46,7 @@ const Register = () => {
           
           // If no error or error is just "no rows found", table exists
           // 500 errors might be RLS issues, but table exists
-          setDatabaseReady(!error || error.code === 'PGRST116' || error.status === 500);
+          setDatabaseReady(!error || error.code === 'PGRST116');
         } catch (error: any) {
           // If query fails with 500, table might exist but have RLS issues
           // That's okay - the trigger will handle user creation

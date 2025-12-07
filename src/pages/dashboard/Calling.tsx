@@ -84,6 +84,8 @@ interface DeepgramSettings {
           mode: string;
           id: string;
         };
+        voice_id?: string;
+        api_key?: string;
         language_code?: string;
         engine?: string;
         credentials?: {
@@ -111,6 +113,7 @@ interface DeepgramSettings {
         type: string;
         model?: string;
         temperature?: number | string;
+        api_key?: string;
         credentials?: {
           type: string;
           region: string;
@@ -826,7 +829,7 @@ const Calling = () => {
         }
         
         // Merge agent settings with saved Deepgram settings as fallback
-        const agentDeepgramSettings = agent.settings?.deepgram || {};
+        const agentDeepgramSettings = (agent.settings?.deepgram || {}) as Partial<DeepgramSettings>;
         console.log('Agent Deepgram settings:', {
           hasApiKey: !!agentDeepgramSettings.api_key,
           hasAgent: !!agentDeepgramSettings.agent,
@@ -838,7 +841,7 @@ const Calling = () => {
           apiKeyPreview: savedDeepgramSettings.api_key ? '***' + savedDeepgramSettings.api_key.slice(-4) : 'MISSING'
         });
         
-        const mergedSettings = {
+        const mergedSettings: DeepgramSettings = {
           ...savedDeepgramSettings,
           ...agentDeepgramSettings,
           // Ensure API key is preserved (saved settings take priority)
@@ -852,8 +855,8 @@ const Calling = () => {
               prompt: agent.systemPrompt || agentDeepgramSettings.agent?.think?.prompt || savedDeepgramSettings?.agent?.think?.prompt || '',
             },
             greeting: agent.greeting || agentDeepgramSettings.agent?.greeting || savedDeepgramSettings?.agent?.greeting || '',
-          },
-        };
+          } as DeepgramSettings['agent'],
+        } as DeepgramSettings;
         
         console.log('Merged settings check:', { 
           hasApiKey: !!mergedSettings.api_key,
@@ -2863,7 +2866,7 @@ const Calling = () => {
                                 <div className="space-y-1">
                                   <Label className="text-xs text-muted-foreground">Voice</Label>
                                   <Select
-                                    value={deepgramSettings.agent.speak.provider.voice || 'Matthew'}
+                                    value={typeof deepgramSettings.agent.speak.provider.voice === 'string' ? deepgramSettings.agent.speak.provider.voice : 'Matthew'}
                                     onValueChange={(value) =>
                                       setDeepgramSettings({
                                         ...deepgramSettings,

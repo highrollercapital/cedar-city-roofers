@@ -744,13 +744,14 @@ const AppointmentForm = ({ onSuccess, leadId, initialStartTime, initialEndTime }
               // Find selected lead and auto-fill
               const lead = leads?.find((l: Lead) => l.id === value);
               if (lead) {
+                const typedLead = lead as Lead;
                 setFormData(prev => ({
                   ...prev,
                   lead_id: value,
-                  title: `Appointment with ${lead.name}`,
-                  description: `Roofing consultation for ${lead.roof_type || 'roofing project'}`,
-                  location: lead.address 
-                    ? `${lead.address}${lead.city ? `, ${lead.city}` : ''}${lead.state ? `, ${lead.state}` : ''}`
+                  title: `Appointment with ${typedLead.name}`,
+                  description: `Roofing consultation for ${typedLead.roof_type || 'roofing project'}`,
+                  location: typedLead.address 
+                    ? `${typedLead.address}${typedLead.city ? `, ${typedLead.city}` : ''}${typedLead.state ? `, ${typedLead.state}` : ''}`
                     : '',
                 }));
               }

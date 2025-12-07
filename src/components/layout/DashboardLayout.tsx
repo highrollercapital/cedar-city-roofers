@@ -190,13 +190,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         console.error('Upload error:', uploadError);
         console.error('Error details:', {
           message: uploadError.message,
-          statusCode: uploadError.statusCode,
-          error: uploadError.error,
+          name: uploadError.name,
         });
 
         if (uploadError.message?.includes('Bucket not found') || 
-            uploadError.message?.includes('not found') ||
-            uploadError.statusCode === '404') {
+            uploadError.message?.includes('not found')) {
           toast({
             title: 'Storage bucket not configured',
             description: (

@@ -1,25 +1,15 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key';
+// Use the Lovable-standard env variable names
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://nnvllbxleujvqoyfqgqe.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-  console.warn('⚠️ Supabase URL and Anon Key must be set in environment variables');
-  console.warn('⚠️ The app will work but database features will be disabled');
+const isConfigured = supabaseUrl && supabaseAnonKey && supabaseAnonKey.startsWith('eyJ');
+
+if (!isConfigured) {
+  console.warn('⚠️ Supabase configuration incomplete');
 } else {
-  // Validate URL format
-  if (!supabaseUrl.includes('.supabase.co') || !supabaseUrl.startsWith('https://')) {
-    console.error('❌ Invalid Supabase URL format. Should be: https://your-project-id.supabase.co');
-    console.error('Current URL:', supabaseUrl);
-  }
-  
-  // Validate key format
-  if (!supabaseAnonKey.startsWith('eyJ')) {
-    console.error('❌ Invalid Supabase key format. Should be a JWT token starting with "eyJ"');
-  } else {
-    console.log('✅ Supabase configured');
-    console.log('URL:', supabaseUrl.replace(/\/[^/]*$/, '/***'));
-  }
+  console.log('✅ Supabase configured');
 }
 
 // Create Supabase client with fallback values to prevent crashes
