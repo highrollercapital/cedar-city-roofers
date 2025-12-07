@@ -35,11 +35,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const isSupabaseConfigured = () => {
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
-    return url && key && key.startsWith('eyJ');
-  };
+  // Supabase is always configured - we have hardcoded fallbacks in the client
+  const isSupabaseConfigured = () => true;
 
   const fetchUserProfile = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
@@ -311,40 +308,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     fullName: string,
     role: 'admin' | 'roofer' | 'client' = 'roofer'
   ) => {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    if (!isSupabaseConfigured()) {
-      toast({
-        title: 'Supabase Configuration Required',
-        description: 'Please set up your Supabase credentials.',
-        variant: 'destructive',
-        duration: 10000,
-      });
-      throw new Error('Supabase not configured');
-    }
-
-    // Validate URL format
-    if (!supabaseUrl.includes('.supabase.co') || !supabaseUrl.startsWith('https://')) {
-      toast({
-        title: 'Invalid Supabase URL Format',
-        description: `Your URL format is incorrect.\n\nShould be: https://your-project-id.supabase.co\n\nCurrent: ${supabaseUrl}\n\nGet the correct URL from:\nSupabase Dashboard → Settings → API → Project URL`,
-        variant: 'destructive',
-        duration: 15000,
-      });
-      throw new Error('Invalid Supabase URL format');
-    }
-    
-    // Check for common URL mistakes
-    if (supabaseUrl.endsWith('/')) {
-      toast({
-        title: 'URL Format Issue',
-        description: `Remove the trailing slash from your URL.\n\nCurrent: ${supabaseUrl}\n\nShould be: ${supabaseUrl.slice(0, -1)}`,
-        variant: 'destructive',
-        duration: 10000,
-      });
-      throw new Error('URL should not end with a slash');
-    }
 
     try {
       console.log('Attempting sign up for:', email);
