@@ -1,1 +1,10 @@
 project_id = "nnvllbxleujvqoyfqgqe"
+
+[functions.validate-access-code]
+verify_jwt = false
+
+[functions.test-integration]
+verify_jwt = true
+
+[functions.update-secrets]
+verify_jwt = true

@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, role?: 'admin' | 'roofer' | 'client') => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateUser: (updates: Partial<User>) => Promise<void>;
   isAdmin: boolean;
@@ -38,6 +38,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Supabase is always configured - we have hardcoded fallbacks in the client
   const isSupabaseConfigured = () => true;
 
+  // Fetch user's role from the user_roles table (server-side authority)
+  const fetchUserRole = async (userId: string): Promise<'admin' | 'roofer' | 'client'> => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .order('role') // admin comes first alphabetically
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return 'client'; // Default to least privilege
+      }
+
+      return (data?.role as 'admin' | 'roofer' | 'client') || 'client';
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      return 'client';
+    }
+  };
+
   const fetchUserProfile = async (supabaseUser: SupabaseUser | null) => {
     if (!supabaseUser) {
       setUser(null);
@@ -52,17 +75,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', supabaseUser.id)
-        .single();
+      // Fetch user profile and role in parallel
+      const [profileResult, role] = await Promise.all([
+        supabase.from('users').select('*').eq('id', supabaseUser.id).single(),
+        fetchUserRole(supabaseUser.id)
+      ]);
+
+      const { data, error } = profileResult;
 
       if (error) throw error;
       
       if (data) {
-        console.log('User profile found:', data.email);
-        setUser(data as User);
+        console.log('User profile found:', data.email, 'Role from user_roles:', role);
+        // Override the role from user_roles table (authoritative source)
+        setUser({ ...data, role } as User);
         return;
       }
     } catch (error: any) {
@@ -85,10 +111,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                           supabaseUser.user_metadata?.name || 
                           emailName.charAt(0).toUpperCase() + emailName.slice(1);
           
-          // Default to 'roofer' role if not specified (since this is for partners)
-          const role = supabaseUser.user_metadata?.role || 'roofer';
-          
-          console.log('Creating profile with:', { id: supabaseUser.id, email: supabaseUser.email, fullName, role });
+          console.log('Creating profile with:', { id: supabaseUser.id, email: supabaseUser.email, fullName });
           
           const { data, error: insertError } = await supabase
             .from('users')
@@ -96,7 +119,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               id: supabaseUser.id,
               email: supabaseUser.email || '',
               full_name: fullName,
-              role: role as 'admin' | 'roofer' | 'client',
+              role: 'client', // Always default to client - roles managed in user_roles table
             })
             .select()
             .single();
@@ -112,7 +135,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               .single();
             
             if (retryData) {
-              setUser(retryData as User);
+              const role = await fetchUserRole(supabaseUser.id);
+              setUser({ ...retryData, role } as User);
               return;
             }
             throw insertError;
@@ -120,7 +144,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           if (data) {
             console.log('User profile created successfully:', data.email);
-            setUser(data as User);
+            const role = await fetchUserRole(supabaseUser.id);
+            setUser({ ...data, role } as User);
           }
         } catch (insertErr: any) {
           console.error('Error creating user profile:', insertErr);
@@ -142,19 +167,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             
             if (retryData && !retryError) {
               console.log('Profile found after RLS error (likely created by trigger)');
-              setUser(retryData as User);
+              const role = await fetchUserRole(supabaseUser.id);
+              setUser({ ...retryData, role } as User);
               return;
             }
           }
           
           // If we can't create the profile, still try to set a minimal user object
-          // so the user can at least log in
+          // so the user can at least log in - use role from user_roles
+          const role = await fetchUserRole(supabaseUser.id);
           setUser({
             id: supabaseUser.id,
             email: supabaseUser.email || '',
             full_name: supabaseUser.user_metadata?.full_name || null,
             phone: null,
-            role: (supabaseUser.user_metadata?.role as 'admin' | 'roofer' | 'client') || 'roofer',
+            role: role,
             company_name: null,
             company_logo_url: null,
             created_at: supabaseUser.created_at || new Date().toISOString(),
@@ -257,9 +284,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           await fetchUserProfile(data.user);
           console.log('User profile loaded successfully');
           
-          // Get user role for welcome message
-          const userRole = data.user.user_metadata?.role || 'client';
-          const roleMessage = userRole === 'admin' ? 'Admin' : userRole === 'roofer' ? 'Partner' : 'Client';
+          // Get user role from user_roles table for welcome message
+          const role = await fetchUserRole(data.user.id);
+          const roleMessage = role === 'admin' ? 'Admin' : role === 'roofer' ? 'Partner' : 'Client';
           
           toast({
             title: 'Welcome back!',
@@ -273,14 +300,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const fullName = data.user.user_metadata?.full_name || 
                           data.user.user_metadata?.name || 
                           emailName.charAt(0).toUpperCase() + emailName.slice(1);
-          const role = data.user.user_metadata?.role || 'roofer';
+          const role = await fetchUserRole(data.user.id);
           
           setUser({
             id: data.user.id,
             email: data.user.email || '',
             full_name: fullName,
             phone: null,
-            role: role as 'admin' | 'roofer' | 'client',
+            role: role,
             company_name: null,
             company_logo_url: null,
             created_at: data.user.created_at || new Date().toISOString(),
@@ -302,23 +329,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
+  // signUp no longer accepts role - roles are assigned server-side only
   const signUp = async (
     email: string,
     password: string,
-    fullName: string,
-    role: 'admin' | 'roofer' | 'client' = 'roofer'
+    fullName: string
   ) => {
-
     try {
       console.log('Attempting sign up for:', email);
       
+      // Do NOT pass role in user_metadata - roles are managed server-side only
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
-            role: role,
+            // NO ROLE HERE - roles are assigned by database trigger (default: client)
           },
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },
@@ -351,7 +378,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
 
       if (data.user) {
-        // Wait a moment for the trigger to create the profile
+        // Wait a moment for the trigger to create the profile and role
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Fetch the user profile (don't throw if it fails - trigger should have created it)
@@ -365,7 +392,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         
         toast({
           title: 'Account created!',
-          description: 'Your partner account has been created. You can now sign in.',
+          description: 'Your account has been created. An admin will assign your role.',
         });
       }
     } catch (error: any) {
@@ -424,16 +451,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const updateUser = async (updates: Partial<User>) => {
     if (!user) return;
 
+    // Remove role from updates - roles should only be changed by admins via user_roles table
+    const { role, ...safeUpdates } = updates;
+    if (role) {
+      console.warn('Attempted to update role via updateUser - this is not allowed');
+    }
+
     try {
       const { data, error } = await supabase
         .from('users')
-        .update(updates)
+        .update(safeUpdates)
         .eq('id', user.id)
         .select()
         .single();
 
       if (error) throw error;
-      setUser(data as User);
+      // Keep the current role from user_roles (don't use the role from users table)
+      setUser({ ...data, role: user.role } as User);
       toast({
         title: 'Profile updated',
         description: 'Your profile has been successfully updated.',
@@ -463,4 +497,3 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-

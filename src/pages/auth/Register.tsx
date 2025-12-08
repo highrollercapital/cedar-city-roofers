@@ -6,10 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Info, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-
-const ACCESS_CODE = '370105';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -20,6 +18,8 @@ const Register = () => {
     accessCode: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidatingCode, setIsValidatingCode] = useState(false);
+  const [accessCodeValid, setAccessCodeValid] = useState<boolean | null>(null);
   const [supabaseConfigured, setSupabaseConfigured] = useState(true);
   const [databaseReady, setDatabaseReady] = useState<boolean | null>(null);
   const { signUp } = useAuth();
@@ -61,11 +61,49 @@ const Register = () => {
     }
   }, []);
 
+  // Validate access code server-side when user finishes typing
+  const validateAccessCode = async (code: string) => {
+    if (!code || code.length < 3) {
+      setAccessCodeValid(null);
+      return;
+    }
+
+    setIsValidatingCode(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-access-code', {
+        body: { accessCode: code }
+      });
+
+      if (error) {
+        console.error('Error validating access code:', error);
+        setAccessCodeValid(false);
+        return;
+      }
+
+      setAccessCodeValid(data?.valid === true);
+    } catch (error) {
+      console.error('Error calling validate-access-code:', error);
+      setAccessCodeValid(false);
+    } finally {
+      setIsValidatingCode(false);
+    }
+  };
+
+  // Debounce access code validation
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.accessCode) {
+        validateAccessCode(formData.accessCode);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [formData.accessCode]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate access code
-    if (formData.accessCode !== ACCESS_CODE) {
+    // Final server-side validation of access code
+    if (!accessCodeValid) {
       return;
     }
 
@@ -76,7 +114,8 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.fullName, 'roofer');
+      // signUp no longer takes role - roles are assigned server-side only
+      await signUp(formData.email, formData.password, formData.fullName);
       // Wait a moment for user profile to load
       await new Promise(resolve => setTimeout(resolve, 500));
       // Redirect to back office dashboard
@@ -88,7 +127,6 @@ const Register = () => {
     }
   };
 
-  const isAccessCodeValid = formData.accessCode === ACCESS_CODE;
   const passwordsMatch = formData.password === formData.confirmPassword || formData.confirmPassword === '';
 
   return (
@@ -192,14 +230,20 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
                 type="text"
                 placeholder="Enter access code"
                 value={formData.accessCode}
-                onChange={(e) => setFormData({ ...formData, accessCode: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, accessCode: e.target.value });
+                  setAccessCodeValid(null); // Reset while typing
+                }}
                 required
                 disabled={isLoading}
               />
-              {formData.accessCode && !isAccessCodeValid && (
-                <p className="text-xs text-destructive">Invalid access code</p>
+              {isValidatingCode && (
+                <p className="text-xs text-muted-foreground">Validating access code...</p>
               )}
-              {isAccessCodeValid && (
+              {!isValidatingCode && formData.accessCode && accessCodeValid === false && (
+                <p className="text-xs text-destructive">Invalid access code. Contact support for access.</p>
+              )}
+              {!isValidatingCode && accessCodeValid === true && (
                 <p className="text-xs text-green-600">✓ Access code verified</p>
               )}
             </div>
@@ -232,14 +276,14 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={isLoading || !supabaseConfigured || !isAccessCodeValid || !passwordsMatch}
+              disabled={isLoading || !supabaseConfigured || accessCodeValid !== true || !passwordsMatch || isValidatingCode}
             >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating account...
                 </>
-              ) : !isAccessCodeValid ? (
+              ) : accessCodeValid !== true ? (
                 'Enter Valid Access Code'
               ) : (
                 'Create Partner Account'
@@ -257,6 +301,9 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
               ← Back to website
             </Link>
           </div>
+          <div className="mt-4 text-center text-xs text-muted-foreground">
+            <p>Note: After registration, an admin will assign your partner role.</p>
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -264,4 +311,3 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here`}
 };
 
 export default Register;
-
