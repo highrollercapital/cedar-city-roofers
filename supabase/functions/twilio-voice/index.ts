@@ -190,7 +190,7 @@ async function handleCallStatus(req: Request) {
   });
 }
 
-// Handle connect to Deepgram - returns TwiML
+// Handle connect to Deepgram - returns TwiML with Stream
 async function handleConnectDeepgram(req: Request, url: URL) {
   console.log('📞 Connect Deepgram webhook called');
   
@@ -207,46 +207,23 @@ async function handleConnectDeepgram(req: Request, url: URL) {
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
   
-  // Fetch voice agent settings from database
-  let greeting = "Hello! Thank you for calling. I'm your AI assistant. How can I help you today?";
-  
-  try {
-    const settingsResponse = await fetch(
-      `${supabaseUrl}/rest/v1/settings?key=like.voice_agent_%&order=updated_at.desc&limit=1`,
-      {
-        headers: {
-          'apikey': supabaseKey || '',
-          'Authorization': `Bearer ${supabaseKey}`,
-        }
-      }
-    );
-    
-    if (settingsResponse.ok) {
-      const settingsData = await settingsResponse.json();
-      if (settingsData.length > 0 && settingsData[0].value?.greeting) {
-        greeting = settingsData[0].value.greeting;
-      }
-    }
-  } catch (e) {
-    console.warn('Could not fetch voice agent settings:', e);
-  }
+  // Build WebSocket URL for the Twilio-Deepgram bridge
+  // Twilio's <Stream> connects to our WebSocket bridge function
+  const wsUrl = supabaseUrl?.replace('https://', 'wss://') + '/functions/v1/twilio-deepgram-bridge';
+  const streamUrl = `${wsUrl}?leadId=${leadId || ''}&callSid=${callSid}`;
 
-  // Create TwiML response
-  // Since we can't do real-time WebSocket bidirectional audio in an edge function,
-  // we'll use Twilio's <Say> and <Gather> for a simpler interaction
+  console.log(`   Stream URL: ${streamUrl}`);
+
+  // Create TwiML response that streams audio to our bridge
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="Polly.Matthew">${escapeXml(greeting)}</Say>
-  <Pause length="1"/>
-  <Gather input="speech" timeout="5" action="${supabaseUrl}/functions/v1/twilio-voice?action=twiml-response&amp;leadId=${leadId || ''}" method="POST">
-    <Say voice="Polly.Matthew">Please tell me how I can assist you.</Say>
-  </Gather>
-  <Say voice="Polly.Matthew">I didn't hear a response. Goodbye!</Say>
+  <Connect>
+    <Stream url="${escapeXml(streamUrl)}" />
+  </Connect>
 </Response>`;
 
-  console.log('   Returning TwiML response');
+  console.log('   Returning TwiML with Stream');
 
   return new Response(twiml, {
     headers: { 'Content-Type': 'text/xml' }
