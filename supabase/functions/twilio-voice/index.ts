@@ -117,9 +117,9 @@ async function handleMakeCall(
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const functionUrl = `${supabaseUrl}/functions/v1/twilio-voice`;
 
-  // Create TwiML URL with settings encoded
-  const settingsParam = settings ? encodeURIComponent(JSON.stringify(settings)) : '';
-  const twimlUrl = `${functionUrl}?action=connect-deepgram&leadId=${leadId || ''}&settings=${settingsParam}`;
+  // Store settings in a simple way - just use leadId to retrieve from DB later
+  // Don't pass settings in URL to avoid exceeding Twilio's 4000 char limit
+  const twimlUrl = `${functionUrl}?action=connect-deepgram&leadId=${leadId || ''}`;
   const statusCallbackUrl = `${functionUrl}?action=call-status`;
 
   // Make Twilio API call
@@ -195,16 +195,6 @@ async function handleConnectDeepgram(req: Request, url: URL) {
   console.log('📞 Connect Deepgram webhook called');
   
   const leadId = url.searchParams.get('leadId');
-  const settingsParam = url.searchParams.get('settings');
-  
-  let settings = null;
-  if (settingsParam) {
-    try {
-      settings = JSON.parse(decodeURIComponent(settingsParam));
-    } catch (e) {
-      console.warn('Failed to parse settings:', e);
-    }
-  }
 
   // Get form data from Twilio
   let callSid = '';
@@ -216,19 +206,32 @@ async function handleConnectDeepgram(req: Request, url: URL) {
     console.warn('Could not parse form data:', e);
   }
 
-  // Build TwiML response that connects to Deepgram
-  // Note: For Deepgram Voice Agent, we need to use a WebSocket stream
-  // Twilio's <Stream> connects to our WebSocket handler
-  
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY');
   
-  // Convert https:// to wss:// for WebSocket connection
-  const wsUrl = supabaseUrl?.replace('https://', 'wss://').replace('.supabase.co', '.functions.supabase.co');
-  const streamUrl = `${wsUrl}/v1/twilio-deepgram-stream?callSid=${callSid}&leadId=${leadId || ''}`;
+  // Fetch voice agent settings from database
+  let greeting = "Hello! Thank you for calling. I'm your AI assistant. How can I help you today?";
   
-  // Get greeting from settings or use default
-  const greeting = settings?.agent?.greeting || 
-    "Hello! Thank you for calling. I'm your AI assistant. How can I help you today?";
+  try {
+    const settingsResponse = await fetch(
+      `${supabaseUrl}/rest/v1/settings?key=like.voice_agent_%&order=updated_at.desc&limit=1`,
+      {
+        headers: {
+          'apikey': supabaseKey || '',
+          'Authorization': `Bearer ${supabaseKey}`,
+        }
+      }
+    );
+    
+    if (settingsResponse.ok) {
+      const settingsData = await settingsResponse.json();
+      if (settingsData.length > 0 && settingsData[0].value?.greeting) {
+        greeting = settingsData[0].value.greeting;
+      }
+    }
+  } catch (e) {
+    console.warn('Could not fetch voice agent settings:', e);
+  }
 
   // Create TwiML response
   // Since we can't do real-time WebSocket bidirectional audio in an edge function,
