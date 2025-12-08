@@ -957,45 +957,40 @@ const Calling = () => {
             to: formattedPhone,
             from: fromNumber,
             agent: agent.name,
-            backend: 'http://localhost:3000/api/make-call-deepgram',
+            backend: 'Supabase Edge Function',
             hasApiKey: !!mergedSettings.api_key
           });
 
-          const response = await fetch('http://localhost:3000/api/make-call-deepgram', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+          // Use Supabase Edge Function instead of localhost backend
+          const { data: callData, error: callError } = await supabase.functions.invoke('twilio-voice', {
+            body: {
               to: formattedPhone,
               from: fromNumber,
               leadId: lead.id,
               settings: mergedSettings, // Use merged settings with agent's system prompt
-            }),
+            },
           });
 
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Backend error response:', errorText);
-            
-            // Parse error message for better user feedback
-            let errorMessage = `Backend returned ${response.status}: ${errorText}`;
-            try {
-              const errorJson = JSON.parse(errorText);
-              if (errorJson.error) {
-                errorMessage = errorJson.error;
-                // Check if it's a Twilio verification error
-                if (errorMessage.includes('unverified') || errorMessage.includes('verified numbers')) {
-                  errorMessage = `Phone number verification required: ${errorMessage}. Please verify this number in your Twilio console at https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
-                }
-              }
-            } catch (e) {
-              // If parsing fails, use the original error text
-            }
-            throw new Error(errorMessage);
+          if (callError) {
+            console.error('Edge function error:', callError);
+            throw new Error(callError.message || 'Failed to initiate call');
           }
 
-          const result = await response.json();
+          const response = { ok: callData?.success, status: callData?.success ? 200 : 500 };
+          const result = callData;
+
+          if (!response.ok || !result?.success) {
+            const errorMessage = result?.error || 'Failed to initiate call';
+            console.error('Call initiation error:', errorMessage);
+            
+            // Check if it's a Twilio verification error
+            let displayError = errorMessage;
+            if (errorMessage.includes('unverified') || errorMessage.includes('verified numbers')) {
+              displayError = `Phone number verification required: ${errorMessage}. Please verify this number in your Twilio console at https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
+            }
+            throw new Error(displayError);
+          }
+
           console.log('Call API response:', result);
 
           if (result.success) {
